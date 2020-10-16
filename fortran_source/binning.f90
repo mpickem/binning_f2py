@@ -14,56 +14,85 @@ module Mbinning
   ! the matrix, vector sizes go to the end of the call list
   ! since we do not have to provide them in python
   ! automatic detection
-  subroutine binMatrix(inMatrix, vec1, vec2, outMatrix, inX, inY, vec1length, vec2length)
+  subroutine binMatrix(inMatrix, vec1, vec2, outMatrix, inX, inY, vec1length, vec2length, outX, outY)
     implicit none
-    integer, intent(in) :: inX, inY, vec1length, vec2length
+    integer, intent(in) :: inX, inY, vec1length, vec2length, outX, outY
 
     real(dp), dimension(inX, inY), intent(in) :: inMatrix
-    real(dp), dimension(vec1length, vec2length), intent(inout) :: outMatrix
+    real(dp), dimension(outX, outY), intent(inout) :: outMatrix
 
     integer, dimension(vec1length), intent(in) :: vec1
     integer, dimension(vec2length), intent(in) :: vec2
 
+    logical :: ordered
+
     integer :: i,j
     integer :: ii,jj
-    integer :: vec1sum, vec2sum
     real(dp) :: tempsum
 
     integer :: xbegin, xend
     integer :: ybegin, yend
 
     ! check vector lengths
-    vec1sum = 0
-    do i=1,vec1length
-      vec1sum = vec1sum + vec1(i)
+
+    if ((vec1length+1 /= outX) .or. (vec2length+1 /= outY)) then
+      write(*,*) 'WARNING: outMatrix size inconsistent with vector'
+    endif
+
+
+    ordered = .true.
+    do i=2,vec1length
+      if (vec1(i) <= vec1(i-1)) then
+        ordered = .false.
+      endif
     enddo
 
-    vec2sum = 0
-    do j=1,vec2length
-      vec2sum = vec2sum + vec2(j)
+    if (.not. ordered) then
+      write(*,*) 'WARNING: X-vector not ordered'
+    endif
+
+    ordered = .true.
+    do j=2,vec2length
+      if (vec2(j) <= vec2(j-1)) then
+        ordered = .false.
+      endif
     enddo
 
-    if ((vec1sum /= inX) .or. (vec2sum /= inY)) then
-      write(*,*) 'WARNING: vector sizes in disagreement'
+    if (.not. ordered) then
+      write(*,*) 'WARNING: Y-vector not ordered'
     endif
 
 
     ! we scan through the coarse grid
-    do j=1,vec2length
-      do i=1,vec1length
+    do j=1,vec2length+1
+      do i=1,vec1length+1
 
         ! determine index ranges
-        xbegin = 1
-        do ii=1,i-1
-          xbegin = xbegin + vec1(ii)
-        enddo
-        xend = xbegin + vec1(i) - 1
+        ! here we go from positions [one-indexed]
+        ! to intervals
+        if (i==1) then
+          xbegin = 1
+        else
+          xbegin = vec1(i-1)+1
+        endif
 
-        ybegin = 1
-        do jj=1,j-1
-          ybegin = ybegin + vec2(jj)
-        enddo
-        yend = ybegin + vec2(j) - 1
+        if (i==(vec1length+1)) then
+          xend = inX
+        else
+          xend = vec1(i)
+        endif
+
+        if (j==1) then
+          ybegin = 1
+        else
+          ybegin = vec2(j-1)+1
+        endif
+
+        if (j==(vec2length+1)) then
+          yend = inY
+        else
+          yend = vec2(j)
+        endif
 
 
         ! index through the coarse grid and sum all elements
