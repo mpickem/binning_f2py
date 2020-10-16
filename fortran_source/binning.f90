@@ -14,196 +14,152 @@ module Mbinning
   ! the matrix, vector sizes go to the end of the call list
   ! since we do not have to provide them in python
   ! automatic detection
-  subroutine binMatrix_r(inMatrix, vec1, vec2, outMatrix, inX, inY, vec1length, vec2length, outX, outY)
+  subroutine binMatrix_r(inMatrix, vec1, vec2, outMatrix, inX, inY, vec1length, vec2length)
     implicit none
-    integer, intent(in) :: inX, inY, vec1length, vec2length, outX, outY
+    integer, intent(in) :: inX, inY, vec1length, vec2length
 
     real(dp), dimension(inX, inY), intent(in) :: inMatrix
-    real(dp), dimension(outX, outY), intent(inout) :: outMatrix
+    real(dp), dimension(vec1length, vec2length), intent(inout) :: outMatrix
 
     integer, dimension(vec1length), intent(in) :: vec1
     integer, dimension(vec2length), intent(in) :: vec2
-
-    logical :: ordered
 
     integer :: i,j
     integer :: ii,jj
     real(dp) :: tempsum
+    integer :: vecsum
 
     integer :: xbegin, xend
     integer :: ybegin, yend
 
     ! check vector lengths
 
-    if ((vec1length+1 /= outX) .or. (vec2length+1 /= outY)) then
-      write(*,*) 'WARNING: outMatrix size inconsistent with vector'
+    vecsum = 0
+    do i=1,vec1length
+      vecsum = vecsum + vec1(i)
+    enddo
+
+    if (vecsum /= inX) then
+      write(*,*) 'WARNING: inMatrix x-size inconsistent with x vector'
     endif
 
 
-    ordered = .true.
-    do i=2,vec1length
-      if (vec1(i) <= vec1(i-1)) then
-        ordered = .false.
-      endif
+    vecsum = 0
+    do i=1,vec2length
+      vecsum = vecsum + vec2(i)
     enddo
 
-    if (.not. ordered) then
-      write(*,*) 'WARNING: X-vector not ordered'
-    endif
-
-    ordered = .true.
-    do j=2,vec2length
-      if (vec2(j) <= vec2(j-1)) then
-        ordered = .false.
-      endif
-    enddo
-
-    if (.not. ordered) then
-      write(*,*) 'WARNING: Y-vector not ordered'
+    if (vecsum /= inY) then
+      write(*,*) 'WARNING: inMatrix y-size inconsistent with y vector'
     endif
 
 
     ! we scan through the coarse grid
-    do j=1,vec2length+1
-      do i=1,vec1length+1
+     do j=1,vec2length
+       do i=1,vec1length
 
-        ! determine index ranges
-        ! here we go from positions [one-indexed]
-        ! to intervals
-        if (i==1) then
-          xbegin = 1
-        else
-          xbegin = vec1(i-1)+1
-        endif
+         ! determine index ranges
+         xbegin = 1
+         do ii=1,i-1
+           xbegin = xbegin + vec1(ii)
+         enddo
+         xend = xbegin + vec1(i) - 1
 
-        if (i==(vec1length+1)) then
-          xend = inX
-        else
-          xend = vec1(i)
-        endif
-
-        if (j==1) then
-          ybegin = 1
-        else
-          ybegin = vec2(j-1)+1
-        endif
-
-        if (j==(vec2length+1)) then
-          yend = inY
-        else
-          yend = vec2(j)
-        endif
+         ybegin = 1
+         do jj=1,j-1
+           ybegin = ybegin + vec2(jj)
+         enddo
+         yend = ybegin + vec2(j) - 1
 
 
-        ! index through the coarse grid and sum all elements
-        tempsum = 0
-        do jj=ybegin,yend
-          do ii=xbegin,xend
-            tempsum = tempsum + inMatrix(ii,jj)
-          enddo
-        enddo
+         ! index through the coarse grid and sum all elements
+         tempsum = 0
+         do jj=ybegin,yend
+           do ii=xbegin,xend
+             tempsum = tempsum + inMatrix(ii,jj)
+           enddo
+         enddo
 
-        outMatrix(i,j) = tempsum
+         outMatrix(i,j) = tempsum
 
-      enddo
-    enddo
+       enddo
+     enddo
 
   end subroutine
 
-  subroutine binMatrix_c(inMatrix, vec1, vec2, outMatrix, inX, inY, vec1length, vec2length, outX, outY)
+  subroutine binMatrix_c(inMatrix, vec1, vec2, outMatrix, inX, inY, vec1length, vec2length)
     implicit none
-    integer, intent(in) :: inX, inY, vec1length, vec2length, outX, outY
+    integer, intent(in) :: inX, inY, vec1length, vec2length
 
     complex(dp), dimension(inX, inY), intent(in) :: inMatrix
-    complex(dp), dimension(outX, outY), intent(inout) :: outMatrix
+    complex(dp), dimension(vec1length, vec2length), intent(inout) :: outMatrix
 
     integer, dimension(vec1length), intent(in) :: vec1
     integer, dimension(vec2length), intent(in) :: vec2
 
-    logical :: ordered
-
     integer :: i,j
     integer :: ii,jj
     complex(dp) :: tempsum
+    integer :: vecsum
 
     integer :: xbegin, xend
     integer :: ybegin, yend
 
     ! check vector lengths
 
-    if ((vec1length+1 /= outX) .or. (vec2length+1 /= outY)) then
-      write(*,*) 'WARNING: outMatrix size inconsistent with vector'
+    vecsum = 0
+    do i=1,vec1length
+      vecsum = vecsum + vec1(i)
+    enddo
+
+    if (vecsum /= inX) then
+      write(*,*) 'WARNING: inMatrix x-size inconsistent with x vector'
     endif
 
 
-    ordered = .true.
-    do i=2,vec1length
-      if (vec1(i) <= vec1(i-1)) then
-        ordered = .false.
-      endif
+    vecsum = 0
+    do i=1,vec2length
+      vecsum = vecsum + vec2(i)
     enddo
 
-    if (.not. ordered) then
-      write(*,*) 'WARNING: X-vector not ordered'
-    endif
-
-    ordered = .true.
-    do j=2,vec2length
-      if (vec2(j) <= vec2(j-1)) then
-        ordered = .false.
-      endif
-    enddo
-
-    if (.not. ordered) then
-      write(*,*) 'WARNING: Y-vector not ordered'
+    if (vecsum /= inY) then
+      write(*,*) 'WARNING: inMatrix y-size inconsistent with y vector'
     endif
 
 
     ! we scan through the coarse grid
-    do j=1,vec2length+1
-      do i=1,vec1length+1
+     do j=1,vec2length
+       do i=1,vec1length
 
-        ! determine index ranges
-        ! here we go from positions [one-indexed]
-        ! to intervals
-        if (i==1) then
-          xbegin = 1
-        else
-          xbegin = vec1(i-1)+1
-        endif
+         ! determine index ranges
+         xbegin = 1
+         do ii=1,i-1
+           xbegin = xbegin + vec1(ii)
+         enddo
+         xend = xbegin + vec1(i) - 1
 
-        if (i==(vec1length+1)) then
-          xend = inX
-        else
-          xend = vec1(i)
-        endif
-
-        if (j==1) then
-          ybegin = 1
-        else
-          ybegin = vec2(j-1)+1
-        endif
-
-        if (j==(vec2length+1)) then
-          yend = inY
-        else
-          yend = vec2(j)
-        endif
+         ybegin = 1
+         do jj=1,j-1
+           ybegin = ybegin + vec2(jj)
+         enddo
+         yend = ybegin + vec2(j) - 1
 
 
-        ! index through the coarse grid and sum all elements
-        tempsum = 0
-        do jj=ybegin,yend
-          do ii=xbegin,xend
-            tempsum = tempsum + inMatrix(ii,jj)
-          enddo
-        enddo
+         ! index through the coarse grid and sum all elements
+         tempsum = 0
+         do jj=ybegin,yend
+           do ii=xbegin,xend
+             tempsum = tempsum + inMatrix(ii,jj)
+           enddo
+         enddo
 
-        outMatrix(i,j) = tempsum
+         outMatrix(i,j) = tempsum
 
-      enddo
-    enddo
+       enddo
+     enddo
 
   end subroutine
+
+
 
 end module Mbinning
